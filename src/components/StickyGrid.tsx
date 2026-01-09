@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import StickyNote from "./StickyNote";
 import TutorPanel from "./TutorPanel";
 import type { Sticky } from "@/types/sticky";
-import { LS_AI_KILL, readKillSwitch, subscribeKillSwitch } from "@/lib/killSwitch";
 
 const LS_NOTES = "buikecore:notes";
 const LS_TUTOR_COUNT = "buikecore:stats:tutor_requests";
@@ -33,24 +32,17 @@ export default function StickyGrid() {
   const [notes, setNotes] = useState<Sticky[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectMode, setSelectMode] = useState(false);
-
   const [tutorOpen, setTutorOpen] = useState(false);
-  const [aiKilled, setAiKilled] = useState(false);
 
   useEffect(() => {
     setNotes(loadNotes());
   }, []);
 
   useEffect(() => {
-  if (typeof window === 'undefined') return;
-  if (notes.length === 0) return;
-  saveNotes(notes);
-}, [notes]);
-  useEffect(() => {
-  if (typeof window === 'undefined') return;
-  const loaded = loadNotes();
-  setNotes(loaded);
-}, []);
+    if (typeof window === 'undefined') return;
+    if (notes.length === 0) return;
+    saveNotes(notes);
+  }, [notes]);
 
   const selectedStickies = useMemo(
     () => notes.filter((n) => selectedIds.includes(n.id)),
@@ -90,7 +82,6 @@ export default function StickyGrid() {
   }
 
   function openTutor() {
-    if (aiKilled) return;
     if (selectedIds.length === 0) return;
 
     // stats
@@ -130,15 +121,14 @@ export default function StickyGrid() {
           </button>
 
           <button
-            disabled={aiKilled || selectedIds.length === 0}
+            disabled={selectedIds.length === 0}
             onClick={openTutor}
             className={`rounded-2xl px-5 py-3 text-sm font-semibold transition
-              ${
-                aiKilled || selectedIds.length === 0
-                  ? "bg-blue-600/30 text-white/60 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-500"
+              ${selectedIds.length === 0
+                ? "bg-blue-600/30 text-white/60 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-500"
               }`}
-            title={aiKilled ? "Tutor disabled by admin" : selectedIds.length === 0 ? "Select at least 1 note" : "Open tutor"}
+            title={selectedIds.length === 0 ? "Select at least 1 note" : "Open tutor"}
           >
             Ask Tutor
           </button>
@@ -166,7 +156,6 @@ export default function StickyGrid() {
         onClose={() => setTutorOpen(false)}
         selectedStickies={selectedStickies}
         remainingToday={20}
-        aiDisabled={aiKilled}
       />
     </main>
   );
