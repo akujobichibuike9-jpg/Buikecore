@@ -1,8 +1,7 @@
-import { NextConfig } from 'next';
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',
-  // Add other configurations if needed
+  // ✅ remove output: 'export'
 };
 
 export default nextConfig;
