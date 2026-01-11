@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import AppGate from "@/components/AppGate";
+import AnalyticsTracker from "@/components/AnalyticsTracker";
 
 export const metadata: Metadata = {
   title: "BuikeCore",
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="BuikeCore" />
       </head>
       <body>
+        <AnalyticsTracker />
         <AppGate>{children}</AppGate>
       </body>
     </html>

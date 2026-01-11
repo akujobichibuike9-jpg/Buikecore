@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 type StickyLike = {
   id: string;
@@ -91,19 +92,21 @@ export default function TutorPanel({
         pdfBase64 = arrayBufferToBase64(buf);
       }
 
+      const bodyData = JSON.stringify({
+        question,
+        context: stickyContext,
+        pdfBase64,
+        pdfName,
+        messages: nextMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      });
+
       const res = await fetch("/api/tutor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question,
-          context: stickyContext,
-          pdfBase64,
-          pdfName,
-          messages: nextMessages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+        body: bodyData,
       });
 
       const data = await res.json();
@@ -122,6 +125,7 @@ export default function TutorPanel({
 
       const answer = (data?.answer ?? "").toString();
       setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
+      trackEvent("tutor_request", { question });
     } catch (e: any) {
       const msg = e?.message || "Tutor failed to respond";
       setStatus(msg);
@@ -133,7 +137,7 @@ export default function TutorPanel({
 
   const quick = [
     { label: "Summarise", text: "Summarise these notes and the PDF (if attached)." },
-    { label: "Explain simply", text: "Explain this simply like I’m new to it." },
+    { label: "Explain simply", text: "Explain this simply like I'm new to it." },
     { label: "Quiz me", text: "Quiz me on this. Start easy then increase difficulty." },
     { label: "Flashcards", text: "Make flashcards from this content (Q/A format)." },
   ];

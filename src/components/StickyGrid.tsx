@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import StickyNote from "./StickyNote";
 import TutorPanel from "./TutorPanel";
 import type { Sticky } from "@/types/sticky";
+import { trackEvent } from "@/lib/analytics";
+import { readKillSwitch, subscribeKillSwitch, LS_AI_KILL } from "@/lib/killSwitch";
 
 const LS_NOTES = "buikecore:notes";
 const LS_TUTOR_COUNT = "buikecore:stats:tutor_requests";
@@ -33,6 +35,7 @@ export default function StickyGrid() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectMode, setSelectMode] = useState(false);
   const [tutorOpen, setTutorOpen] = useState(false);
+  const [aiKilled, setAiKilled] = useState(false);
 
   useEffect(() => {
     setNotes(loadNotes());
@@ -43,6 +46,23 @@ export default function StickyGrid() {
     if (notes.length === 0) return;
     saveNotes(notes);
   }, [notes]);
+
+  useEffect(() => {
+    const sync = () => {
+      const killed = readKillSwitch(LS_AI_KILL);
+      console.log('🔍 AI Kill Switch Check:', killed); // DEBUG
+      setAiKilled(killed);
+    };
+    
+    sync(); // Initial check
+    
+    const unsub = subscribeKillSwitch(() => {
+      console.log('🔔 Kill switch event triggered!'); // DEBUG
+      sync();
+    });
+    
+    return unsub;
+  }, []);
 
   const selectedStickies = useMemo(
     () => notes.filter((n) => selectedIds.includes(n.id)),
@@ -57,6 +77,7 @@ export default function StickyGrid() {
       updatedAt: Date.now(),
     };
     setNotes((prev) => [next, ...prev]);
+    trackEvent("note_created");
   }
 
   function updateNote(id: string, patch: Partial<Sticky>) {
@@ -68,6 +89,7 @@ export default function StickyGrid() {
   function deleteNote(id: string) {
     setNotes((prev) => prev.filter((n) => n.id !== id));
     setSelectedIds((prev) => prev.filter((x) => x !== id));
+    trackEvent("note_deleted");
   }
 
   function toggleSelect(id: string) {
@@ -82,6 +104,13 @@ export default function StickyGrid() {
   }
 
   function openTutor() {
+    console.log('🎯 Opening tutor, AI killed?', aiKilled); // DEBUG
+    
+    if (aiKilled) {
+      alert("❌ The Study Tutor has been disabled by the admin.");
+      return;
+    }
+
     if (selectedIds.length === 0) return;
 
     // stats
@@ -89,6 +118,7 @@ export default function StickyGrid() {
     localStorage.setItem(LS_TUTOR_COUNT, String(count));
     localStorage.setItem(LS_TUTOR_LAST, String(Date.now()));
 
+    trackEvent("tutor_opened");
     setTutorOpen(true);
   }
 
@@ -121,16 +151,22 @@ export default function StickyGrid() {
           </button>
 
           <button
-            disabled={selectedIds.length === 0}
+            disabled={aiKilled || selectedIds.length === 0}
             onClick={openTutor}
             className={`rounded-2xl px-5 py-3 text-sm font-semibold transition
-              ${selectedIds.length === 0
+              ${aiKilled || selectedIds.length === 0
                 ? "bg-blue-600/30 text-white/60 cursor-not-allowed"
                 : "bg-blue-600 text-white hover:bg-blue-500"
               }`}
-            title={selectedIds.length === 0 ? "Select at least 1 note" : "Open tutor"}
+            title={
+              aiKilled 
+                ? "Tutor disabled by admin" 
+                : selectedIds.length === 0 
+                ? "Select at least 1 note" 
+                : "Open tutor"
+            }
           >
-            Ask Tutor
+            Ask Tutor {aiKilled && '🔒'}
           </button>
         </div>
       </div>
