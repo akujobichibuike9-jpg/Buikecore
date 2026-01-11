@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // ✅ remove output: 'export'
+  // no output: "export"
 };
 
 export default nextConfig;
